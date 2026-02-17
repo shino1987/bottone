@@ -62,7 +62,7 @@ class MMSFilter(BaseFilter):
         """
         lows = []
         
-        for i in range(len(candles) - 2, 0, -1):
+        for i in range(len(candles) - 2, 1, -1):
             if (candles[i]['low'] < candles[i-1]['low'] and 
                 candles[i]['low'] < candles[i+1]['low']):
                 lows.append({

@@ -242,7 +242,7 @@ class MultiPairMonitor:
                 try:
                     dt = datetime.fromisoformat(stats['last_check'])
                     last_check = dt.strftime('%H:%M:%S')
-                except:
+                except (ValueError, TypeError):
                     pass
             
             lines.append(

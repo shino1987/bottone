@@ -66,15 +66,14 @@ class CHOCHFilter(BaseFilter):
         
         # Find local minimum within lookback period
         swing_lows = []
-        for i in range(len(candles) - lookback, len(candles) - 2):
-            if i > 0 and i < len(candles) - 1:
-                if (candles[i]['low'] < candles[i-1]['low'] and 
-                    candles[i]['low'] < candles[i+1]['low']):
-                    swing_lows.append({
-                        'index': i,
-                        'price': candles[i]['low'],
-                        'timestamp': candles[i]['timestamp']
-                    })
+        for i in range(max(1, len(candles) - lookback), len(candles) - 1):
+            if (candles[i]['low'] < candles[i-1]['low'] and 
+                candles[i]['low'] < candles[i+1]['low']):
+                swing_lows.append({
+                    'index': i,
+                    'price': candles[i]['low'],
+                    'timestamp': candles[i]['timestamp']
+                })
         
         # Return the most recent swing low
         if swing_lows:
