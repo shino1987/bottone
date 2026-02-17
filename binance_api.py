@@ -257,3 +257,46 @@ class BinanceAPI:
         except Exception as e:
             self.logger.error(f"Error closing position: {e}")
             return False
+
+    def get_ohlcv(self, symbol: str, interval: str = '15m', limit: int = 50) -> Optional[list]:
+        """
+        Get OHLCV (Open, High, Low, Close, Volume) data for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            interval: Kline interval (e.g., '1m', '5m', '15m', '1h', '1d')
+            limit: Number of candlesticks to retrieve (max 1000, default 50)
+            
+        Returns:
+            List of OHLCV data or None on error.
+            Each element is a dict with keys: 
+            'timestamp', 'open', 'high', 'low', 'close', 'volume'
+        """
+        try:
+            self.logger.debug(f"Fetching OHLCV for {symbol}, interval={interval}, limit={limit}")
+            klines = self.client.get_klines(symbol=symbol, interval=interval, limit=limit)
+            
+            # Convert raw klines to structured format
+            ohlcv_data = []
+            for kline in klines:
+                ohlcv_data.append({
+                    'timestamp': kline[0],  # Open time
+                    'open': float(kline[1]),
+                    'high': float(kline[2]),
+                    'low': float(kline[3]),
+                    'close': float(kline[4]),
+                    'volume': float(kline[5]),
+                    'close_time': kline[6],
+                    'quote_volume': float(kline[7]),
+                    'trades': int(kline[8])
+                })
+            
+            self.logger.debug(f"Retrieved {len(ohlcv_data)} candlesticks for {symbol}")
+            return ohlcv_data
+            
+        except BinanceAPIException as e:
+            self.logger.error(f"Binance API error getting OHLCV: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting OHLCV: {e}")
+            return None

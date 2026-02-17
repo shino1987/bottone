@@ -10,6 +10,7 @@ from datetime import datetime
 from config import Config
 from binance_api import BinanceAPI
 from filters.base_filter import BaseFilter
+from filters.state_machine import TradingStateMachine
 
 
 class TradingBot:
@@ -17,31 +18,55 @@ class TradingBot:
     Main trading bot class that manages orders, positions, and risk.
     """
 
-    def __init__(self, api: BinanceAPI, filters: Optional[List[BaseFilter]] = None):
+    def __init__(
+        self,
+        api: BinanceAPI,
+        filters: Optional[List[BaseFilter]] = None,
+        symbols: Optional[List[str]] = None
+    ):
         """
         Initialize the trading bot.
         
         Args:
             api: BinanceAPI instance
             filters: List of trading filters to apply
+            symbols: List of trading pair symbols (for multi-pair support)
         """
         self.logger = logging.getLogger(__name__)
         self.api = api
         self.filters = filters or []
         
-        self.symbol = Config.TRADING_PAIR
+        # Multi-pair support
+        self.symbols = symbols or [Config.TRADING_PAIR]
+        self.state_machines: Dict[str, TradingStateMachine] = {}
+        
+        # Initialize state machine for each symbol
+        for symbol in self.symbols:
+            self.state_machines[symbol] = TradingStateMachine(symbol)
+        
+        # Default single symbol for backwards compatibility
+        self.symbol = self.symbols[0] if self.symbols else Config.TRADING_PAIR
+        
         self.leverage = Config.LEVERAGE
         self.position_size = Config.POSITION_SIZE
         self.stop_loss_percent = Config.STOP_LOSS_PERCENT
         self.take_profit_percent = Config.TAKE_PROFIT_PERCENT
         self.dry_run = Config.DRY_RUN
         
+        # Per-symbol position tracking
+        self.positions: Dict[str, Optional[Dict[str, Any]]] = {symbol: None for symbol in self.symbols}
+        self.entry_prices: Dict[str, Optional[float]] = {symbol: None for symbol in self.symbols}
+        self.stop_loss_prices: Dict[str, Optional[float]] = {symbol: None for symbol in self.symbols}
+        self.take_profit_prices: Dict[str, Optional[float]] = {symbol: None for symbol in self.symbols}
+        
+        # Legacy single position fields for backwards compatibility
         self.current_position: Optional[Dict[str, Any]] = None
         self.entry_price: Optional[float] = None
         self.stop_loss_price: Optional[float] = None
         self.take_profit_price: Optional[float] = None
         
         self.logger.info("TradingBot initialized")
+        self.logger.info(f"Trading pairs: {len(self.symbols)}")
         self.logger.info(f"Filters loaded: {len(self.filters)}")
 
     def add_filter(self, filter_instance: BaseFilter) -> None:
@@ -53,6 +78,92 @@ class TradingBot:
         """
         self.filters.append(filter_instance)
         self.logger.info(f"Filter added: {filter_instance.name}")
+
+    def get_state_machine(self, symbol: Optional[str] = None) -> TradingStateMachine:
+        """
+        Get the state machine for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (defaults to primary symbol)
+            
+        Returns:
+            TradingStateMachine instance for the symbol
+        """
+        if symbol is None:
+            symbol = self.symbol
+        return self.state_machines.get(symbol)
+    
+    def get_current_state(self, symbol: Optional[str] = None) -> int:
+        """
+        Get the current state for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (defaults to primary symbol)
+            
+        Returns:
+            Current state number
+        """
+        state_machine = self.get_state_machine(symbol)
+        return state_machine.get_current_state() if state_machine else 0
+    
+    def transition_state(
+        self,
+        new_state: int,
+        symbol: Optional[str] = None,
+        data: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Transition to a new state for a symbol.
+        
+        Args:
+            new_state: Target state number
+            symbol: Trading pair symbol (defaults to primary symbol)
+            data: Optional data associated with the transition
+            
+        Returns:
+            True if transition was successful, False otherwise
+        """
+        state_machine = self.get_state_machine(symbol)
+        if not state_machine:
+            self.logger.error(f"No state machine found for {symbol}")
+            return False
+        
+        return state_machine.transition_to(new_state, data)
+    
+    def get_market_data_with_ohlcv(self, symbol: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Get market data including OHLCV for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (defaults to primary symbol)
+            
+        Returns:
+            Dictionary with market data including OHLCV or None on error
+        """
+        if symbol is None:
+            symbol = self.symbol
+        
+        price = self.api.get_symbol_price(symbol)
+        if price is None:
+            return None
+        
+        # Fetch 15-minute OHLCV data (last 50 candles)
+        ohlcv = self.api.get_ohlcv(symbol, interval='15m', limit=50)
+        if ohlcv is None:
+            self.logger.warning(f"Could not fetch OHLCV data for {symbol}")
+            # Return basic data without OHLCV
+            return {
+                'symbol': symbol,
+                'price': price,
+                'timestamp': datetime.now().isoformat()
+            }
+        
+        return {
+            'symbol': symbol,
+            'price': price,
+            'ohlcv': ohlcv,
+            'timestamp': datetime.now().isoformat()
+        }
 
     def get_market_data(self) -> Optional[Dict[str, Any]]:
         """
@@ -329,8 +440,16 @@ class TradingBot:
         Returns:
             Dictionary with bot status information
         """
+        # Get state information for all symbols
+        states_info = {}
+        for symbol in self.symbols:
+            state_machine = self.get_state_machine(symbol)
+            if state_machine:
+                states_info[symbol] = state_machine.get_status()
+        
         return {
             'symbol': self.symbol,
+            'symbols': self.symbols,
             'leverage': self.leverage,
             'dry_run': self.dry_run,
             'has_position': self.current_position is not None,
@@ -338,5 +457,13 @@ class TradingBot:
             'entry_price': self.entry_price,
             'stop_loss': self.stop_loss_price,
             'take_profit': self.take_profit_price,
-            'filters_count': len(self.filters)
+            'filters_count': len(self.filters),
+            'states': states_info,
+            'positions_per_symbol': {
+                symbol: {
+                    'has_position': self.positions[symbol] is not None,
+                    'entry_price': self.entry_prices[symbol]
+                }
+                for symbol in self.symbols
+            }
         }

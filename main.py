@@ -9,6 +9,7 @@ from config import Config
 from binance_api import BinanceAPI
 from bot import TradingBot
 from filters.base_filter import SimpleFilter
+from filters.buyside_liquidity import BuysideLiquidityFilter
 
 
 def setup_logging():
@@ -66,32 +67,52 @@ def main():
         if not Config.DRY_RUN:
             sys.exit(1)
     
+    # Define 20 USDC trading pairs for multi-pair support
+    usdc_pairs = [
+        'BTCUSDC', 'ETHUSDC', 'BNBUSDC', 'ADAUSDC', 'DOGEUSDC',
+        'XRPUSDC', 'DOTUSDC', 'UNIUSDC', 'LTCUSDC', 'LINKUSDC',
+        'SOLUSDC', 'MATICUSDC', 'AVAXUSDC', 'ATOMUSDC', 'ETCUSDC',
+        'ALGOUSDC', 'XLMUSDC', 'VETUSDC', 'ICPUSDC', 'FILUSDC'
+    ]
+    
+    logger.info(f"Configured {len(usdc_pairs)} USDC trading pairs")
+    
     # Initialize filters
-    # For now, we use a simple example filter
-    # Users can add their own filters here
+    # Use BuysideLiquidityFilter for step 1 of the strategy
     filters = [
-        SimpleFilter()
+        BuysideLiquidityFilter(params={
+            'swing_period': 5,
+            'min_swing_count': 5,
+            'volume_threshold': 1.2
+        })
     ]
     
     logger.info(f"Loaded {len(filters)} filter(s)")
     for filter_instance in filters:
         logger.info(f"  - {filter_instance.get_description()}")
     
-    # Initialize trading bot
-    bot = TradingBot(api=api, filters=filters)
+    # Initialize trading bot with multi-pair support
+    bot = TradingBot(api=api, filters=filters, symbols=usdc_pairs)
     
     # Set leverage (for cross margin, this is informational)
-    api.set_leverage(Config.TRADING_PAIR, Config.LEVERAGE)
+    for symbol in usdc_pairs:
+        api.set_leverage(symbol, Config.LEVERAGE)
     
     # Display bot status
     status = bot.get_status()
     logger.info("=" * 60)
     logger.info("Bot Status:")
-    logger.info(f"  Symbol: {status['symbol']}")
+    logger.info(f"  Primary Symbol: {status['symbol']}")
+    logger.info(f"  Total Pairs: {len(status['symbols'])}")
     logger.info(f"  Leverage: {status['leverage']}x")
     logger.info(f"  Dry Run: {status['dry_run']}")
     logger.info(f"  Filters: {status['filters_count']}")
     logger.info("=" * 60)
+    
+    # Log state machine initialization
+    logger.info("State Machines Initialized:")
+    for symbol, state_info in status['states'].items():
+        logger.info(f"  {symbol}: {state_info['state_description']}")
     
     # Start the bot
     try:
