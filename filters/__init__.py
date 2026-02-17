@@ -3,6 +3,7 @@ Filters module for technical analysis.
 """
 
 from .base_filter import BaseFilter
+from .market_structure import MarketStructureFilter
 from .downtrend import DowntrendFilter
 from .liquidity_sweep import LiquiditySweepFilter
 from .choch import CHOCHFilter
@@ -13,6 +14,7 @@ from .state_machine import StateMachine, TradingState
 
 __all__ = [
     'BaseFilter',
+    'MarketStructureFilter',
     'DowntrendFilter',
     'LiquiditySweepFilter',
     'CHOCHFilter',

@@ -8,6 +8,7 @@ import time
 from typing import Dict, Any, Optional
 from enum import Enum
 
+from filters.market_structure import MarketStructureFilter
 from filters.downtrend import DowntrendFilter
 from filters.liquidity_sweep import LiquiditySweepFilter
 from filters.choch import CHOCHFilter
@@ -19,6 +20,7 @@ from filters.entry import EntryFilter
 class TradingState(Enum):
     """Trading strategy states."""
     IDLE = "IDLE"
+    MARKET_STRUCTURE = "MARKET_STRUCTURE"
     DOWNTREND = "DOWNTREND"
     LIQUIDITY_SWEEP = "LIQUIDITY_SWEEP"
     CHOCH = "CHOCH"
@@ -52,6 +54,7 @@ class StateMachine:
         self.state_entry_time = time.time()
         
         # Initialize filters
+        self.market_structure_filter = MarketStructureFilter()
         self.downtrend_filter = DowntrendFilter()
         self.liquidity_sweep_filter = LiquiditySweepFilter()
         self.choch_filter = CHOCHFilter()
@@ -61,6 +64,7 @@ class StateMachine:
         
         # State data
         self.state_data = {
+            'market_structure': None,
             'choch_level': None,
             'fvg_zone': None,
             'demand_zone': None,
@@ -96,6 +100,7 @@ class StateMachine:
         """Reset state machine to IDLE."""
         self.logger.warning(f"Resetting state machine from {self.state.value}")
         self.state_data = {
+            'market_structure': None,
             'choch_level': None,
             'fvg_zone': None,
             'demand_zone': None,
@@ -124,6 +129,8 @@ class StateMachine:
         # Process based on current state
         if self.state == TradingState.IDLE:
             return self._process_idle(market_data)
+        elif self.state == TradingState.MARKET_STRUCTURE:
+            return self._process_market_structure(market_data)
         elif self.state == TradingState.DOWNTREND:
             return self._process_downtrend(market_data)
         elif self.state == TradingState.LIQUIDITY_SWEEP:
@@ -140,9 +147,23 @@ class StateMachine:
         return None
     
     def _process_idle(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process IDLE state - start looking for downtrend."""
+        """Process IDLE state - start with market structure analysis."""
         self.logger.debug("Starting analysis from IDLE state")
-        self._transition_to(TradingState.DOWNTREND)
+        self._transition_to(TradingState.MARKET_STRUCTURE)
+        return None
+    
+    def _process_market_structure(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Process MARKET_STRUCTURE state - Step 1."""
+        if self.market_structure_filter.analyze(market_data):
+            self.state_data['market_structure'] = self.market_structure_filter.get_market_structure()
+            self.logger.info(
+                f"Step 1 confirmed: Market structure '{self.state_data['market_structure']}', "
+                f"moving to downtrend detection"
+            )
+            self._transition_to(TradingState.DOWNTREND)
+        else:
+            self.logger.debug("Market structure not confirmed yet")
+        
         return None
     
     def _process_downtrend(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
