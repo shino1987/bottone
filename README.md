@@ -18,7 +18,7 @@ Un bot di trading automatico per Binance con supporto per ordini a margine incro
 
 Il bot implementa una strategia completa in 7 fasi:
 
-1. **Market Structure**: Validazione volume minimo (1M USDT) e struttura di mercato
+1. **Buyside Liquidity**: Rilevamento di liquidità buyside a swing high con volume elevato
 2. **Downtrend**: Rilevamento di 2-3 lower lows e lower highs consecutivi
 3. **Liquidity Sweep**: Identificazione di sweep di liquidità e zona di domanda
 4. **CHOCH (Change of Character)**: Rilevamento di rottura della struttura e cambio trend
@@ -38,7 +38,7 @@ bottone/
 ├── filters/
 │   ├── __init__.py
 │   ├── base_filter.py           # Classe base per i filtri
-│   ├── market_structure.py      # Step 1: Validazione struttura mercato
+│   ├── buyside_liquidity.py     # Step 1: Rilevamento buyside liquidity
 │   ├── downtrend.py             # Step 2: Rilevamento downtrend
 │   ├── liquidity_sweep.py       # Step 3: Sweep di liquidità
 │   ├── choch.py                 # Step 4: Change of Character
@@ -161,11 +161,11 @@ python main.py
 
 ## Strategia a 7 Step - Dettagli
 
-### Step 1: Market Structure (market_structure.py)
-- Valida volume minimo (1M USDT)
-- Identifica struttura di mercato (ranging/trending_up/trending_down)
-- Controlla gap anomali (max 2%)
-- Verifica movimento sufficiente dei prezzi (min 0.5%)
+### Step 1: Buyside Liquidity (buyside_liquidity.py)
+- Identifica swing high (massimi locali)
+- Filtra per volume elevato (1.2x media)
+- Traccia prezzo di liquidità buyside per i prossimi step
+- Ritorna TRUE quando buyside liquidity trovata
 
 ### Step 2: Downtrend (downtrend.py)
 - Rileva 2-3 lower lows consecutivi
@@ -320,7 +320,7 @@ python -c "from filters.state_machine import TradingStateMachine; from multi_pai
 - **multi_pair_monitor.py**: Monitoraggio multi-coppia con threading
 - **filters/**: Modulo per filtri di analisi tecnica
   - **state_machine.py**: State machine per gestione flusso strategia
-  - **market_structure.py - entry.py**: Filtri per i 7 step
+  - **buyside_liquidity.py - entry.py**: Filtri per i 7 step
 - **main.py**: Entry point e inizializzazione del bot
 
 ## Contribuire
