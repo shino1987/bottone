@@ -24,6 +24,8 @@ class DowntrendFilter(BaseFilter):
             'max_consecutive_lows': 3,  # Maximum to check
             'ma_period': 20,  # Moving average period
             'ma_slope_threshold': -0.5,  # Negative slope threshold (%)
+            'min_candles_for_analysis': 10,  # Minimum candles required
+            'ma_slope_lookback_period': 10,  # Candles to look back for MA comparison
         }
         if params:
             default_params.update(params)
@@ -45,7 +47,8 @@ class DowntrendFilter(BaseFilter):
             return False
 
         candles = market_data['candles']
-        if len(candles) < 10:
+        min_candles = self.params['min_candles_for_analysis']
+        if len(candles) < min_candles:
             return False
 
         # 1️⃣ CHECK FOR LOWER LOWS
@@ -57,7 +60,8 @@ class DowntrendFilter(BaseFilter):
         # 3️⃣ CHECK MA SLOPE
         has_negative_ma = self._check_ma_slope(candles)
         
-        # Downtrend confirmed if ANY condition is met
+        # Downtrend confirmed if ANY condition is met (OR logic per Step 2 requirements)
+        # This allows faster detection and progression through the state machine
         is_downtrend = has_lower_lows or has_lower_highs or has_negative_ma
         
         if is_downtrend:
@@ -94,8 +98,9 @@ class DowntrendFilter(BaseFilter):
             if lows[i] < lows[i-1]:
                 lower_count += 1
         
-        result = lower_count >= 2  # At least 2 lower lows
-        self.logger.debug(f"Lower lows check: {lower_count} consecutive lower lows")
+        min_consecutive = self.params['min_consecutive_lows']
+        result = lower_count >= min_consecutive
+        self.logger.debug(f"Lower lows check: {lower_count} consecutive lower lows (need {min_consecutive})")
         return result
 
     def _check_lower_highs(self, candles: List[Dict[str, Any]]) -> bool:
@@ -112,8 +117,9 @@ class DowntrendFilter(BaseFilter):
             if highs[i] < highs[i-1]:
                 lower_count += 1
         
-        result = lower_count >= 2  # At least 2 lower highs
-        self.logger.debug(f"Lower highs check: {lower_count} consecutive lower highs")
+        min_consecutive = self.params['min_consecutive_lows']
+        result = lower_count >= min_consecutive
+        self.logger.debug(f"Lower highs check: {lower_count} consecutive lower highs (need {min_consecutive})")
         return result
 
     def _find_swing_lows(self, candles: List[Dict[str, Any]], window: int = 2) -> List[float]:
@@ -183,11 +189,12 @@ class DowntrendFilter(BaseFilter):
         closes = [float(c['close']) for c in candles[-ma_period:]]
         ma_current = sum(closes) / len(closes)
         
-        # Compare with MA 10 candles ago
-        if len(candles) < ma_period + 10:
+        # Compare with MA from lookback period ago
+        lookback = self.params['ma_slope_lookback_period']
+        if len(candles) < ma_period + lookback:
             return False
         
-        closes_prev = [float(c['close']) for c in candles[-(ma_period+10):-10]]
+        closes_prev = [float(c['close']) for c in candles[-(ma_period+lookback):-lookback]]
         ma_previous = sum(closes_prev) / len(closes_prev)
         
         # Negative slope if current MA < previous MA
