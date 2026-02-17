@@ -215,7 +215,8 @@ class MMSFilter(BaseFilter):
             True if confirmed, False otherwise
         """
         # Check that higher low is above CHOCH price
-        if higher_low <= choch_price:
+        # For MMS, higher low should be strictly above the CHOCH level
+        if higher_low < choch_price:
             return False
         
         # Check recent price action shows bullish momentum

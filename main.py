@@ -55,6 +55,7 @@ def run_multi_pair_mode(api: BinanceAPI, logger: logging.Logger):
     
     try:
         # Main loop - check for entry signals
+        iteration_count = 0
         while True:
             # Check for entry signals
             entry_signal = monitor.get_next_entry()
@@ -72,9 +73,13 @@ def run_multi_pair_mode(api: BinanceAPI, logger: logging.Logger):
                 else:
                     logger.info("Execute trade logic here")
             
-            # Print statistics every 5 minutes
+            # Sleep for 60 seconds between checks
             time.sleep(60)
-            monitor.print_statistics()
+            
+            # Print statistics every 5 iterations (5 minutes)
+            iteration_count += 1
+            if iteration_count % 5 == 0:
+                monitor.print_statistics()
             
     except KeyboardInterrupt:
         logger.info("Stopping multi-pair monitor...")

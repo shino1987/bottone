@@ -100,10 +100,11 @@ class DowntrendFilter(BaseFilter):
         # Check if we have consecutive lower lows
         consecutive_count = 0
         for i in range(1, min(len(swing_lows), max_consecutive + 1)):
-            if swing_lows[-i] < swing_lows[-i-1] if i < len(swing_lows) else False:
-                consecutive_count += 1
-            else:
-                break
+            if i + 1 < len(swing_lows):
+                if swing_lows[-i] < swing_lows[-(i+1)]:
+                    consecutive_count += 1
+                else:
+                    break
         
         result = consecutive_count >= min_consecutive
         self.logger.debug(f"Lower lows check: {consecutive_count} consecutive (need {min_consecutive})")
@@ -128,10 +129,11 @@ class DowntrendFilter(BaseFilter):
         # Check if we have consecutive lower highs
         consecutive_count = 0
         for i in range(1, min(len(swing_highs), max_consecutive + 1)):
-            if swing_highs[-i] < swing_highs[-i-1] if i < len(swing_highs) else False:
-                consecutive_count += 1
-            else:
-                break
+            if i + 1 < len(swing_highs):
+                if swing_highs[-i] < swing_highs[-(i+1)]:
+                    consecutive_count += 1
+                else:
+                    break
         
         result = consecutive_count >= min_consecutive
         self.logger.debug(f"Lower highs check: {consecutive_count} consecutive (need {min_consecutive})")

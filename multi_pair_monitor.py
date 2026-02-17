@@ -104,11 +104,11 @@ class PairMonitor:
             for kline in klines:
                 candle = {
                     'timestamp': kline[0],
-                    'open': kline[1],
-                    'high': kline[2],
-                    'low': kline[3],
-                    'close': kline[4],
-                    'volume': kline[5],
+                    'open': float(kline[1]),
+                    'high': float(kline[2]),
+                    'low': float(kline[3]),
+                    'close': float(kline[4]),
+                    'volume': float(kline[5]),
                 }
                 candles.append(candle)
             
