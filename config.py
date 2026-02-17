@@ -91,5 +91,5 @@ class Config:
         logging.info(f"Take Profit: {cls.TAKE_PROFIT_PERCENT}%")
         logging.info(f"Dry Run Mode: {cls.DRY_RUN}")
         logging.info(f"Log Level: {cls.LOG_LEVEL}")
-        logging.info(f"API Key: {'*' * 8}{cls.BINANCE_API_KEY[-4:] if cls.BINANCE_API_KEY else 'NOT SET'}")
+        logging.info(f"API Key: {'SET' if cls.BINANCE_API_KEY else 'NOT SET'}")
         logging.info("========================")

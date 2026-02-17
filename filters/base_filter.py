@@ -127,7 +127,10 @@ class SimpleFilter(BaseFilter):
             
         Returns:
             'HOLD' signal
+        
+        Note:
+            This is a placeholder implementation. Real filters should implement
+            actual trading logic based on technical analysis or other criteria.
         """
-        if self.analyze(market_data):
-            return 'HOLD'
+        # Simple filter always returns HOLD as it's just a placeholder
         return 'HOLD'

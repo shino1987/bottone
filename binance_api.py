@@ -206,8 +206,18 @@ class BinanceAPI:
             if not account:
                 return None
             
-            # Find the asset in user assets
-            base_asset = symbol[:-4]  # Remove 'USDT' or similar
+            # Try to extract base asset - handle common quote assets
+            # This is a simplified approach; for production, use exchange info API
+            base_asset = None
+            for quote in ['USDT', 'BUSD', 'USDC', 'BTC', 'ETH', 'BNB']:
+                if symbol.endswith(quote):
+                    base_asset = symbol[:-len(quote)]
+                    break
+            
+            if not base_asset:
+                self.logger.warning(f"Could not determine base asset for {symbol}")
+                return None
+            
             for asset in account.get('userAssets', []):
                 if asset['asset'] == base_asset:
                     return asset

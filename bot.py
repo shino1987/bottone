@@ -151,6 +151,8 @@ class TradingBot:
             return False
         
         # Calculate quantity based on position size
+        # Note: In production, this should be rounded according to the symbol's
+        # LOT_SIZE filter from exchange info to meet Binance's trading rules
         quantity = self.position_size / price
         
         if self.dry_run:
