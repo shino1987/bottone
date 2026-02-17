@@ -10,21 +10,28 @@ Un bot di trading automatico per Binance con supporto per ordini a margine incro
 - 🛡️ **Risk Management**: Gestione automatica di leva, stop loss e take profit
 - 📊 **Logging completo**: Tracciamento dettagliato di tutte le operazioni
 - 🏗️ **Struttura modulare**: Facile da estendere e manutenere
+- 🎯 **Buyside Liquidity Filter**: Identifica zone di liquidità su swing low
+- 🔄 **State Machine**: Traccia la progressione attraverso 7 step strategici
+- 📈 **Analisi OHLCV**: Dati candlestick 15 minuti da Binance
+- 🌐 **Multi-pair Support**: Monitoraggio simultaneo di 20 coppie USDC
 
 ## Struttura del Progetto
 
 ```
 bottone/
-├── config.py           # Configurazione da variabili d'ambiente
-├── binance_api.py      # Wrapper API Binance per margine incrociato
+├── config.py                      # Configurazione da variabili d'ambiente
+├── binance_api.py                 # Wrapper API Binance per margine incrociato
 ├── filters/
 │   ├── __init__.py
-│   └── base_filter.py  # Classe base per i filtri di analisi
-├── bot.py              # Logica principale del bot di trading
-├── main.py             # Entry point dell'applicazione
-├── requirements.txt    # Dipendenze Python
-├── .env.example        # Template variabili d'ambiente
-└── .gitignore          # File da ignorare in git
+│   ├── base_filter.py             # Classe base per i filtri di analisi
+│   ├── buyside_liquidity.py       # Filtro per identificare liquidity ai swing low
+│   └── state_machine.py           # State machine per i 7 step della strategia
+├── bot.py                         # Logica principale del bot di trading
+├── main.py                        # Entry point dell'applicazione
+├── requirements.txt               # Dipendenze Python
+├── .env.example                   # Template variabili d'ambiente
+├── .gitignore                     # File da ignorare in git
+└── STEP1_IMPLEMENTATION.md        # Documentazione implementazione Step 1
 ```
 
 ## Installazione
@@ -179,7 +186,40 @@ python -c "import config, binance_api, bot; from filters.base_filter import Base
 - **binance_api.py**: Wrapper per l'API Binance con supporto margine incrociato
 - **bot.py**: Logica principale del bot, gestione ordini e risk management
 - **filters/**: Modulo per filtri di analisi tecnica
+  - **base_filter.py**: Classe base per tutti i filtri
+  - **buyside_liquidity.py**: Filtro per identificare liquidity ai swing low
+  - **state_machine.py**: State machine per tracciare i 7 step della strategia
 - **main.py**: Entry point e inizializzazione del bot
+
+## Step 1: Buyside Liquidity Filter
+
+Il bot ora implementa il primo step della strategia di trading:
+
+### Funzionalità
+
+1. **Identificazione Swing Low**: Analizza gli ultimi 50 candlestick a 15 minuti per identificare swing low (minimi locali)
+
+2. **Calcolo Zone di Liquidità**: Identifica zone di liquidità basate su volume e supporto
+
+3. **State Machine a 7 Step**: 
+   - State 0: Nessuna posizione (cerca buyside liquidity)
+   - State 1: Buyside Liquidity trovata (cerca downtrend)
+   - State 2: Downtrend confermato (cerca liquidity sweep + demand zone)
+   - State 3: Liquidity Sweep trovato (attendi CHOCH)
+   - State 4: CHOCH verificato (attendi MMS)
+   - State 5: MMS creato (attendi Bullish FVG)
+   - State 6: Bullish FVG formata (attendi ritraccia + entry)
+   - State 7: Entry long eseguito
+
+4. **Multi-pair Support**: Monitora simultaneamente 20 coppie USDC:
+   - BTCUSDC, ETHUSDC, BNBUSDC, ADAUSDC, DOGEUSDC
+   - XRPUSDC, DOTUSDC, UNIUSDC, LTCUSDC, LINKUSDC
+   - SOLUSDC, MATICUSDC, AVAXUSDC, ATOMUSDC, ETCUSDC
+   - ALGOUSDC, XLMUSDC, VETUSDC, ICPUSDC, FILUSDC
+
+### Documentazione Dettagliata
+
+Per maggiori dettagli sull'implementazione di Step 1, vedere [STEP1_IMPLEMENTATION.md](STEP1_IMPLEMENTATION.md).
 
 ## Contribuire
 
