@@ -1,0 +1,2 @@
+# bottone
+bot trading new
