@@ -107,11 +107,11 @@ if status['entry_signal']:
 ## Using Individual Filters
 
 ```python
-from filters.market_structure import MarketStructureFilter
+from filters.buyside_liquidity import BuysideLiquidityFilter
 from filters.downtrend import DowntrendFilter
 
 # Initialize filters
-ms_filter = MarketStructureFilter()
+bl_filter = BuysideLiquidityFilter()
 dt_filter = DowntrendFilter()
 
 # Prepare market data
@@ -119,10 +119,10 @@ market_data = {
     'candles': candles,  # List of OHLCV candles
 }
 
-# Test market structure
-if ms_filter.analyze(market_data):
-    structure = ms_filter.get_market_structure(market_data)
-    print(f"Market structure: {structure}")
+# Test buyside liquidity detection
+if bl_filter.analyze(market_data):
+    buyside_data = bl_filter.get_buyside_liquidity_data()
+    print(f"Buyside liquidity found at: {buyside_data}")
 
 # Test downtrend
 if dt_filter.analyze(market_data):

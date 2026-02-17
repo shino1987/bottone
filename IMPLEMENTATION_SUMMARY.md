@@ -6,9 +6,10 @@ Complete implementation of a 7-step trading strategy for the Binance trading bot
 ## Files Created (10 new files)
 
 ### Filter Files (7 Steps)
-1. **filters/market_structure.py** (195 lines)
-   - Validates market conditions (volume, gaps, price movement)
-   - Identifies market structure (ranging/trending_up/trending_down)
+1. **filters/buyside_liquidity.py** (150 lines)
+   - Identifies buyside liquidity at swing highs
+   - Filters by high volume (1.2x average)
+   - Tracks buyside liquidity price for next steps
 
 2. **filters/downtrend.py** (234 lines)
    - Detects 2-3 consecutive lower lows and lower highs

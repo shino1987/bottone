@@ -9,7 +9,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 
-from filters.market_structure import MarketStructureFilter
+from filters.buyside_liquidity import BuysideLiquidityFilter
 from filters.downtrend import DowntrendFilter
 from filters.liquidity_sweep import LiquiditySweepFilter
 from filters.choch import CHOCHFilter
@@ -21,7 +21,7 @@ from filters.entry import EntryFilter
 class TradingState(Enum):
     """Trading state enumeration."""
     IDLE = "IDLE"
-    STEP1_MARKET_STRUCTURE = "STEP1_MARKET_STRUCTURE"
+    STEP1_BUYSIDE_LIQUIDITY = "STEP1_BUYSIDE_LIQUIDITY"
     STEP2_DOWNTREND = "STEP2_DOWNTREND"
     STEP3_LIQUIDITY_SWEEP = "STEP3_LIQUIDITY_SWEEP"
     STEP4_CHOCH = "STEP4_CHOCH"
@@ -66,7 +66,7 @@ class TradingStateMachine:
         
         # Initialize all filters
         self.filters = {
-            'market_structure': MarketStructureFilter(),
+            'buyside_liquidity': BuysideLiquidityFilter(),
             'downtrend': DowntrendFilter(),
             'liquidity_sweep': LiquiditySweepFilter(),
             'choch': CHOCHFilter(),
@@ -97,7 +97,7 @@ class TradingStateMachine:
         # Process current state
         if self.current_state == TradingState.IDLE:
             self._process_idle()
-        elif self.current_state == TradingState.STEP1_MARKET_STRUCTURE:
+        elif self.current_state == TradingState.STEP1_BUYSIDE_LIQUIDITY:
             self._process_step1(market_data)
         elif self.current_state == TradingState.STEP2_DOWNTREND:
             self._process_step2(market_data)
@@ -135,18 +135,22 @@ class TradingStateMachine:
     def _process_idle(self):
         """Process IDLE state."""
         # Automatically transition to STEP1
-        self._transition_to(TradingState.STEP1_MARKET_STRUCTURE)
+        self._transition_to(TradingState.STEP1_BUYSIDE_LIQUIDITY)
 
     def _process_step1(self, market_data: Dict[str, Any]):
-        """Process Step 1: Market Structure."""
-        filter_obj = self.filters['market_structure']
+        """Process Step 1: Buyside Liquidity Detection."""
+        filter_obj = self.filters['buyside_liquidity']
         
         if filter_obj.analyze(market_data):
-            # Market structure valid, proceed to next step
-            self.state_data['market_structure'] = filter_obj.get_market_structure(market_data)
-            self._transition_to(TradingState.STEP2_DOWNTREND)
+            # Buyside liquidity detected, proceed to next step
+            buyside_data = filter_obj.get_buyside_liquidity_data()
+            if buyside_data:
+                self.state_data['buyside_liquidity_price'] = buyside_data['price']
+                self.state_data['buyside_liquidity_volume'] = buyside_data['volume']
+                self.state_data['buyside_liquidity_index'] = buyside_data['index']
+                self._transition_to(TradingState.STEP2_DOWNTREND)
         else:
-            # Reset and wait
+            # Stay in current step, wait for buyside liquidity
             pass
 
     def _process_step2(self, market_data: Dict[str, Any]):
