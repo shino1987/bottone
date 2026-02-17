@@ -115,14 +115,14 @@ class BuysideLiquidityFilter(BaseFilter):
             
             # Check previous candles
             for j in range(i - self.swing_period, i):
-                if ohlcv[j]['low'] <= current_low:
+                if ohlcv[j]['low'] < current_low:
                     is_swing_low = False
                     break
             
             # Check following candles
             if is_swing_low:
                 for j in range(i + 1, min(i + self.swing_period + 1, len(ohlcv))):
-                    if ohlcv[j]['low'] <= current_low:
+                    if ohlcv[j]['low'] < current_low:
                         is_swing_low = False
                         break
             
@@ -254,14 +254,14 @@ class BuysideLiquidityFilter(BaseFilter):
             
             # Check previous candles
             for j in range(i - self.swing_period, i):
-                if ohlcv[j]['high'] >= current_high:
+                if ohlcv[j]['high'] > current_high:
                     is_swing_high = False
                     break
             
             # Check following candles
             if is_swing_high:
                 for j in range(i + 1, min(i + self.swing_period + 1, len(ohlcv))):
-                    if ohlcv[j]['high'] >= current_high:
+                    if ohlcv[j]['high'] > current_high:
                         is_swing_high = False
                         break
             
