@@ -33,6 +33,30 @@ class Config:
     # Risk Management
     MAX_POSITION_SIZE: float = float(os.getenv('MAX_POSITION_SIZE', '1000'))
     MIN_POSITION_SIZE: float = float(os.getenv('MIN_POSITION_SIZE', '10'))
+    
+    # Multi-Pair Configuration (20 liquid USDC pairs)
+    # Note: These pairs are specified in the strategy requirements.
+    # To use different pairs, modify this list directly or override via
+    # environment variable TRADING_PAIRS as a comma-separated string.
+    TRADING_PAIRS: list = [
+        'BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'ADAUSDC',
+        'XRPUSDC', 'DOGEUSDC', 'LTCUSDC', 'MATICUSDC', 'AVAXUSDC',
+        'UNIUSDC', 'LINKUSDC', 'ARBUSDC', 'OPUSDC', 'FTMUSDC',
+        'ONEUSDC', 'APTUSDC', 'SUIUSDC', 'PEPEUSDC', 'GALAUSDC'
+    ]
+    
+    # Allow override from environment variable
+    if os.getenv('TRADING_PAIRS'):
+        TRADING_PAIRS = [p.strip() for p in os.getenv('TRADING_PAIRS').split(',')]
+    
+    # Strategy Configuration
+    TIMEFRAME: str = os.getenv('TIMEFRAME', '15m')
+    KLINE_LIMIT: int = int(os.getenv('KLINE_LIMIT', '50'))
+    STEP_TIMEOUT_MINUTES: int = int(os.getenv('STEP_TIMEOUT_MINUTES', '240'))
+    RISK_PER_TRADE_PERCENT: float = float(os.getenv('RISK_PER_TRADE_PERCENT', '2.0'))
+    RISK_REWARD_RATIO: float = float(os.getenv('RISK_REWARD_RATIO', '3.0'))
+    SL_OFFSET_PIPS: int = int(os.getenv('SL_OFFSET_PIPS', '5'))
+    CHECK_INTERVAL_SECONDS: int = int(os.getenv('CHECK_INTERVAL_SECONDS', '60'))
 
     @classmethod
     def validate(cls) -> bool:

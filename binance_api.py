@@ -257,3 +257,31 @@ class BinanceAPI:
         except Exception as e:
             self.logger.error(f"Error closing position: {e}")
             return False
+
+    def get_klines(self, symbol: str, interval: str = '15m', limit: int = 50) -> Optional[list]:
+        """
+        Get candlestick data (klines) for a symbol.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDC')
+            interval: Kline interval (e.g., '15m', '1h', '4h', '1d')
+            limit: Number of candles to retrieve (max 1000)
+            
+        Returns:
+            List of klines or None on error
+            Each kline is a list: [open_time, open, high, low, close, volume, ...]
+        """
+        try:
+            klines = self.client.get_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=limit
+            )
+            self.logger.debug(f"Retrieved {len(klines)} klines for {symbol}")
+            return klines
+        except BinanceAPIException as e:
+            self.logger.error(f"Binance API error getting klines: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting klines: {e}")
+            return None
