@@ -28,6 +28,7 @@ class DowntrendFilter(BaseFilter):
         if params:
             default_params.update(params)
         super().__init__("Downtrend", default_params)
+        self.state_data = {}  # State tracking data
 
     def analyze(self, market_data: Dict[str, Any]) -> bool:
         """
@@ -44,26 +45,24 @@ class DowntrendFilter(BaseFilter):
             return False
 
         candles = market_data['candles']
-        if len(candles) < 30:
-            self.logger.warning("Insufficient candles for downtrend analysis")
+        if len(candles) < 10:
             return False
 
-        # Check for consecutive lower lows
+        # 1️⃣ CHECK FOR LOWER LOWS
         has_lower_lows = self._check_lower_lows(candles)
         
-        # Check for consecutive lower highs
+        # 2️⃣ CHECK FOR LOWER HIGHS
         has_lower_highs = self._check_lower_highs(candles)
         
-        # Check MA slope
+        # 3️⃣ CHECK MA SLOPE
         has_negative_ma = self._check_ma_slope(candles)
         
-        # All conditions must be met
-        is_downtrend = has_lower_lows and has_lower_highs and has_negative_ma
+        # Downtrend confirmed if ANY condition is met
+        is_downtrend = has_lower_lows or has_lower_highs or has_negative_ma
         
         if is_downtrend:
-            self.logger.info("Downtrend confirmed: lower lows, lower highs, and negative MA")
-        else:
-            self.logger.debug(f"Downtrend not confirmed: LL={has_lower_lows}, LH={has_lower_highs}, MA={has_negative_ma}")
+            self.logger.info(f"Step 2 confirmed: Downtrend detected (LL={has_lower_lows}, LH={has_lower_highs}, MA={has_negative_ma})")
+            self.state_data['downtrend_confirmed'] = True
         
         return is_downtrend
 
@@ -82,61 +81,39 @@ class DowntrendFilter(BaseFilter):
         return 'HOLD'
 
     def _check_lower_lows(self, candles: List[Dict[str, Any]]) -> bool:
-        """
-        Check for consecutive lower lows.
-        
-        Returns:
-            True if pattern found, False otherwise
-        """
-        min_consecutive = self.params['min_consecutive_lows']
-        max_consecutive = self.params['max_consecutive_lows']
-        
-        # Find swing lows (local minima)
-        swing_lows = self._find_swing_lows(candles[-30:])
-        
-        if len(swing_lows) < min_consecutive:
+        """Check for consecutive lower lows in recent candles."""
+        if len(candles) < 4:
             return False
         
-        # Check if we have consecutive lower lows
-        consecutive_count = 0
-        for i in range(1, min(len(swing_lows), max_consecutive + 1)):
-            if i + 1 < len(swing_lows):
-                if swing_lows[-i] < swing_lows[-(i+1)]:
-                    consecutive_count += 1
-                else:
-                    break
+        # Get last 4 candles' lows
+        lows = [float(c['low']) for c in candles[-4:]]
         
-        result = consecutive_count >= min_consecutive
-        self.logger.debug(f"Lower lows check: {consecutive_count} consecutive (need {min_consecutive})")
+        # Check if lows are progressively decreasing
+        lower_count = 0
+        for i in range(1, len(lows)):
+            if lows[i] < lows[i-1]:
+                lower_count += 1
+        
+        result = lower_count >= 2  # At least 2 lower lows
+        self.logger.debug(f"Lower lows check: {lower_count} consecutive lower lows")
         return result
 
     def _check_lower_highs(self, candles: List[Dict[str, Any]]) -> bool:
-        """
-        Check for consecutive lower highs.
-        
-        Returns:
-            True if pattern found, False otherwise
-        """
-        min_consecutive = self.params['min_consecutive_lows']
-        max_consecutive = self.params['max_consecutive_lows']
-        
-        # Find swing highs (local maxima)
-        swing_highs = self._find_swing_highs(candles[-30:])
-        
-        if len(swing_highs) < min_consecutive:
+        """Check for consecutive lower highs in recent candles."""
+        if len(candles) < 4:
             return False
         
-        # Check if we have consecutive lower highs
-        consecutive_count = 0
-        for i in range(1, min(len(swing_highs), max_consecutive + 1)):
-            if i + 1 < len(swing_highs):
-                if swing_highs[-i] < swing_highs[-(i+1)]:
-                    consecutive_count += 1
-                else:
-                    break
+        # Get last 4 candles' highs
+        highs = [float(c['high']) for c in candles[-4:]]
         
-        result = consecutive_count >= min_consecutive
-        self.logger.debug(f"Lower highs check: {consecutive_count} consecutive (need {min_consecutive})")
+        # Check if highs are progressively decreasing
+        lower_count = 0
+        for i in range(1, len(highs)):
+            if highs[i] < highs[i-1]:
+                lower_count += 1
+        
+        result = lower_count >= 2  # At least 2 lower highs
+        self.logger.debug(f"Lower highs check: {lower_count} consecutive lower highs")
         return result
 
     def _find_swing_lows(self, candles: List[Dict[str, Any]], window: int = 2) -> List[float]:
@@ -196,36 +173,28 @@ class DowntrendFilter(BaseFilter):
         return swing_highs
 
     def _check_ma_slope(self, candles: List[Dict[str, Any]]) -> bool:
-        """
-        Check moving average slope for negative trend.
-        
-        Returns:
-            True if MA slope is negative, False otherwise
-        """
+        """Check moving average slope for negative trend."""
         ma_period = self.params['ma_period']
-        threshold = self.params['ma_slope_threshold']
         
-        if len(candles) < ma_period + 5:
+        if len(candles) < ma_period:
             return False
         
-        # Calculate MA values
-        closes = [float(c['close']) for c in candles]
-        ma_values = []
+        # Calculate simple moving average
+        closes = [float(c['close']) for c in candles[-ma_period:]]
+        ma_current = sum(closes) / len(closes)
         
-        for i in range(ma_period, len(closes)):
-            ma = sum(closes[i-ma_period:i]) / ma_period
-            ma_values.append(ma)
-        
-        if len(ma_values) < 2:
+        # Compare with MA 10 candles ago
+        if len(candles) < ma_period + 10:
             return False
         
-        # Calculate slope (percentage change)
-        first_ma = ma_values[-5] if len(ma_values) >= 5 else ma_values[0]
-        last_ma = ma_values[-1]
-        slope = (last_ma - first_ma) / first_ma * 100
+        closes_prev = [float(c['close']) for c in candles[-(ma_period+10):-10]]
+        ma_previous = sum(closes_prev) / len(closes_prev)
         
-        result = slope < threshold
-        self.logger.debug(f"MA slope: {slope:.2f}% (threshold: {threshold}%)")
+        # Negative slope if current MA < previous MA
+        slope = ma_current - ma_previous
+        result = slope < 0
+        
+        self.logger.debug(f"MA slope: {slope:.2f} (negative={result})")
         return result
 
     def get_last_swing_low(self, market_data: Dict[str, Any]) -> Optional[float]:
