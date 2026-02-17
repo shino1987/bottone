@@ -85,7 +85,7 @@ class BuysideLiquidityFilter(BaseFilter):
             return False
         
         # 2️⃣ FILTER BY VOLUME (buyside = high volume)
-        avg_volume = sum([float(c['volume']) for c in candles]) / len(candles)
+        avg_volume = sum(float(c['volume']) for c in candles) / len(candles)
         volume_threshold = avg_volume * self.params['volume_multiplier']
         
         buyside_liquidity = [sh for sh in swing_highs 

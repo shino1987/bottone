@@ -148,7 +148,7 @@ class TradingStateMachine:
                 self.state_data['buyside_liquidity_price'] = buyside_data['price']
                 self.state_data['buyside_liquidity_volume'] = buyside_data['volume']
                 self.state_data['buyside_liquidity_index'] = buyside_data['index']
-            self._transition_to(TradingState.STEP2_DOWNTREND)
+                self._transition_to(TradingState.STEP2_DOWNTREND)
         else:
             # Stay in current step, wait for buyside liquidity
             pass
