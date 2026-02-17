@@ -62,7 +62,9 @@ class MMSFilter(BaseFilter):
         """
         lows = []
         
-        for i in range(len(candles) - 2, 1, -1):
+        # Start from second-to-last candle and search backwards
+        # Stop at index 1 to ensure we can safely access i-1 and i+1
+        for i in range(len(candles) - 2, 0, -1):
             if (candles[i]['low'] < candles[i-1]['low'] and 
                 candles[i]['low'] < candles[i+1]['low']):
                 lows.append({

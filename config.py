@@ -35,12 +35,19 @@ class Config:
     MIN_POSITION_SIZE: float = float(os.getenv('MIN_POSITION_SIZE', '10'))
     
     # Multi-Pair Configuration (20 liquid USDC pairs)
+    # Note: These pairs are specified in the strategy requirements.
+    # To use different pairs, modify this list directly or override via
+    # environment variable TRADING_PAIRS as a comma-separated string.
     TRADING_PAIRS: list = [
         'BTCUSDC', 'ETHUSDC', 'SOLUSDC', 'BNBUSDC', 'ADAUSDC',
         'XRPUSDC', 'DOGEUSDC', 'LTCUSDC', 'MATICUSDC', 'AVAXUSDC',
         'UNIUSDC', 'LINKUSDC', 'ARBUSDC', 'OPUSDC', 'FTMUSDC',
         'ONEUSDC', 'APTUSDC', 'SUIUSDC', 'PEPEUSDC', 'GALAUSDC'
     ]
+    
+    # Allow override from environment variable
+    if os.getenv('TRADING_PAIRS'):
+        TRADING_PAIRS = [p.strip() for p in os.getenv('TRADING_PAIRS').split(',')]
     
     # Strategy Configuration
     TIMEFRAME: str = os.getenv('TIMEFRAME', '15m')

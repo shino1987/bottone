@@ -76,6 +76,11 @@ class MultiPairMonitor:
         """
         Monitor a single trading pair.
         
+        This method runs in a separate thread and continuously monitors
+        the specified trading pair until self.running is set to False.
+        It fetches market data, updates the state machine, and queues
+        entry signals when detected.
+        
         Args:
             symbol: Trading pair symbol
         """

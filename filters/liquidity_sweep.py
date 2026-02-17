@@ -67,9 +67,16 @@ class LiquiditySweepFilter(BaseFilter):
         if len(candles) < lookback + 2:
             return None
         
+        # Calculate search range
+        # Start searching from 3 candles before the end (to have context)
+        start_search_idx = len(candles) - 3
+        # Search back to the lookback limit, but not before index 1
+        end_search_idx = max(1, len(candles) - lookback - 3)
+        
         # Look for local minimum (low lower than surrounding candles)
-        for i in range(len(candles) - 3, max(0, len(candles) - lookback - 3), -1):
-            if i > 0 and i < len(candles) - 1:
+        for i in range(start_search_idx, end_search_idx, -1):
+            # Ensure we can safely access i-1 and i+1
+            if 0 < i < len(candles) - 1:
                 if (candles[i]['low'] < candles[i-1]['low'] and 
                     candles[i]['low'] < candles[i+1]['low']):
                     return {

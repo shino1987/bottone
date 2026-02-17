@@ -120,9 +120,13 @@ def main():
                     
                     # In production, execute the trade here
                     if not Config.DRY_RUN:
-                        # Calculate position size based on risk
-                        # Execute order through bot
                         logger.info(f"Executing trade for {entry['symbol']}")
+                        
+                        # TODO: Implement actual trade execution
+                        # Calculate position size based on risk
+                        # Example:
+                        # risk_amount = account_balance * (Config.RISK_PER_TRADE_PERCENT / 100)
+                        # position_size = risk_amount / (entry['entry'] - entry['stop_loss'])
                         # bot.open_position('BUY', entry['entry'])
                     else:
                         logger.info("[DRY RUN] Would execute trade")
@@ -140,7 +144,7 @@ def main():
                     stats = monitor.get_statistics()
                     logger.info(f"Queue size: {stats['entry_queue_size']}")
                 
-                time.sleep(60)  # Check every minute
+                time.sleep(Config.CHECK_INTERVAL_SECONDS)
                 
             except KeyboardInterrupt:
                 logger.info("Received interrupt signal")

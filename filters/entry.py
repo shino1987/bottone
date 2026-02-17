@@ -18,6 +18,10 @@ class EntryFilter(BaseFilter):
     - Calculates SL and TP automatically
     """
     
+    # Pip conversion factor (0.0001 for most forex pairs, 0.01 for JPY pairs)
+    # This should be adjusted based on instrument
+    PIP_CONVERSION_FACTOR = 0.0001
+    
     def __init__(self, params: Optional[Dict[str, Any]] = None):
         """
         Initialize Entry filter.
@@ -27,11 +31,13 @@ class EntryFilter(BaseFilter):
                 - fvg_zone: Required FVG zone from previous step
                 - risk_reward_ratio: Risk/reward ratio (default: 3.0)
                 - sl_offset_pips: SL offset below FVG in pips (default: 5)
+                - pip_conversion: Pip conversion factor (default: 0.0001)
         """
         default_params = {
             'fvg_zone': None,
             'risk_reward_ratio': 3.0,
-            'sl_offset_pips': 5
+            'sl_offset_pips': 5,
+            'pip_conversion': self.PIP_CONVERSION_FACTOR
         }
         if params:
             default_params.update(params)
@@ -97,7 +103,8 @@ class EntryFilter(BaseFilter):
             Stop loss price
         """
         # Place SL below FVG with offset
-        sl_offset = self.params['sl_offset_pips'] * 0.0001  # Convert pips to price
+        pip_conversion = self.params.get('pip_conversion', self.PIP_CONVERSION_FACTOR)
+        sl_offset = self.params['sl_offset_pips'] * pip_conversion
         stop_loss = fvg_zone['low'] - sl_offset
         
         return stop_loss
