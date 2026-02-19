@@ -11,10 +11,14 @@ from filters.base_filter import BaseFilter
 class BullishFVGFilter(BaseFilter):
     """
     Step 6 - Bullish Fair Value Gap (FVG) Detection
-    - Identify bullish FVG (3-candle gap)
-    - Candle 1 and 3 don't touch
+    
+    Bullish FVG Definition:
+    - Formed by 3 closed candles (C1, C2, C3)
+    - C1 high < C3 low (gap upward, wicks don't touch)
+    - C1 high = bottom of gap
+    - C3 low = top of gap
     - Track price retracement in FVG
-    - Return TRUE when FVG formed
+    - Return 'HOLD' regardless of FVG detection (validation filter)
     """
 
     def __init__(self, params: Optional[Dict[str, Any]] = None):
@@ -69,10 +73,14 @@ class BullishFVGFilter(BaseFilter):
             market_data: Dictionary containing market data
             
         Returns:
-            'HOLD' - This is a validation filter
+            'HOLD' - This is a validation filter that always returns HOLD
+            - If FVG NOT found: returns 'HOLD' (remains on Bullish FVG step)
+            - If FVG found: returns 'HOLD' (proceeds to next step)
         """
         if self.analyze(market_data):
-            return 'HOLD'  # FVG detected, continue to next step
+            # FVG detected - proceed to next step
+            return 'HOLD'
+        # FVG not detected - remain on this step
         return 'HOLD'
 
     def _find_bullish_fvg(self, candles: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -80,10 +88,12 @@ class BullishFVGFilter(BaseFilter):
         Find bullish fair value gap (3-candle pattern).
         
         A bullish FVG occurs when:
-        - Candle 1: Setup candle (bearish or neutral)
-        - Candle 2: Strong bullish candle (gap creator)
-        - Candle 3: Continuation candle
-        - Gap: Candle 1's high < Candle 3's low (no overlap)
+        - Candle 1 (C1): First closed candle
+        - Candle 2 (C2): Strong bullish candle (gap creator)
+        - Candle 3 (C3): Third closed candle
+        - Gap: C1 high < C3 low (no touch between wicks)
+        - C1 high = bottom of gap
+        - C3 low = top of gap
         
         Returns:
             Dictionary with FVG data or None
@@ -99,7 +109,8 @@ class BullishFVGFilter(BaseFilter):
             candle2 = candles[i + 1]
             candle3 = candles[i + 2]
             
-            # Extract price levels
+            # Extract price levels from closed candles
+            # Using high/low to include wicks as per FVG definition
             c1_high = float(candle1['high'])
             c1_low = float(candle1['low'])
             c2_open = float(candle2['open'])
@@ -113,12 +124,18 @@ class BullishFVGFilter(BaseFilter):
             if c2_close <= c2_open:
                 continue
             
-            # 2. Check if there's a gap (candle 1 high and candle 3 low don't touch)
+            # 2. Check if there's a gap (C1 high < C3 low, wicks don't touch)
+            # Skip if NO gap exists (c1_high >= c3_low means they touch or overlap)
             if c1_high >= c3_low:
                 continue
             
-            # 3. Calculate gap size
+            # 3. Calculate gap size safely
             gap_size = c3_low - c1_high
+            # Validate c1_high for safe division (reject zero or negative prices)
+            if c1_high <= 0:
+                self.logger.warning(f"Invalid c1_high value: {c1_high} at candle index {i}, skipping")
+                continue
+            
             gap_percentage = (gap_size / c1_high) * 100
             
             # 4. Verify minimum gap size
@@ -126,6 +143,7 @@ class BullishFVGFilter(BaseFilter):
                 continue
             
             # Bullish FVG found
+            # FVG zone: bottom = C1 high, top = C3 low
             fvg_data = {
                 'low': c1_high,
                 'high': c3_low,
