@@ -131,12 +131,12 @@ class BullishFVGFilter(BaseFilter):
             
             # 3. Calculate gap size safely
             gap_size = c3_low - c1_high
-            # Avoid division by zero (though unlikely with real market data)
-            if c1_high > 0:
-                gap_percentage = (gap_size / c1_high) * 100
-            else:
-                self.logger.warning(f"Invalid c1_high value: {c1_high}, skipping")
+            # Validate c1_high for safe division (reject zero or negative prices)
+            if c1_high <= 0:
+                self.logger.warning(f"Invalid c1_high value: {c1_high} at candle index {i}, skipping")
                 continue
+            
+            gap_percentage = (gap_size / c1_high) * 100
             
             # 4. Verify minimum gap size
             if gap_percentage < min_gap_pct:
